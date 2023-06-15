@@ -16,7 +16,7 @@ def xywh2xyxy(box: np.ndarray):
 def xyxy2xywh(box: np.ndarray):
     result = np.zeros(4) #x1 y1 x2 y2
     result[:2] = (box[:2] + box[2:]) / 2
-    result[2:] = (box[2:] - box[:2]) / 2
+    result[2:] = (box[2:] - box[:2])
     return result
 
 
@@ -33,16 +33,20 @@ class HeadCenterCrop:
         self.margins = np.stack([margin_x, margin_y]).transpose().ravel() #x1 y1 x2 y2 [x-left y-top x-right y-bottom]
         self.target_size = target_size
 
-    def _expand_box(self, box: np.ndarray, image_size: Tuple[int, int]=(-1, -1), input_type='xyxy'):
-        if input_type == 'xywh':
-            box = xywh2xyxy(box)
-
+    def _expand_box(self, box: np.ndarray, image_size: Tuple[int, int]=(-1, -1)):
+        """
+            expand bbox
+            
+            *param box* xyxy
+        """
         wh = xyxy2xywh(box)[2:]
         W, H = image_size
 
         result = np.zeros(4) #xyxy 
         result[:2] = box[:2] - wh * self.margins[:2]
         result[2:] = box[2:] + wh * self.margins[2:]
+
+        print(f'{box=}, {wh=}, {self.margins=}, {result=}, {wh * self.margins[:2]}')
 
         if W > 0: 
             result[[0, 2]] = np.clip(result[[0, 2]], 0, W)
@@ -53,11 +57,12 @@ class HeadCenterCrop:
         return result #xyxy
     
     def _get_area(self, image: np.ndarray, use_bgr: bool = False) -> np.ndarray:
-        H, W = image.shape[:2]
+        H, W, C = image.shape
+        im = image.copy()
         if use_bgr:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB if C < 4 else cv2.COLOR_BGRA2RGB)
 
-        box = self.detector(image)
+        box = self.detector(im)
         box = self._expand_box(box, image_size=(W, H))
         box = xyxy2xywh(box)
         box[[0, 2]] /= W
@@ -72,14 +77,15 @@ class HeadCenterCrop:
         x, y, w, h = self._get_area(image, use_bgr) if manual_area is None else manual_area
 
         ratio = min(self.target_size[0]/w, self.target_size[1]/h)
-        #print(x, y, w, h, ratio)
 
         resized = cv2.resize(image.copy(), (0, 0), fx=ratio, fy=ratio)
-        result = np.ones_like(image, dtype=np.uint8) * 255
+        result = np.zeros_like(image, dtype=np.uint8)
+        result[:,:,:3] = 255
 
         RH, RW = resized.shape[:2]
-        #resized = cv2.rectangle(resized, (int((x-w/2)*RW), int((y-h/2)*RH)), (int((x+w/2)*RW), int((y+h/2)*RH)), (0, 255, 0))
         
+        # print(f'{x=}, {y=}, {w=}, {h=}, {ratio=}, {RH=}, {RW=}, {result.shape=}')
+
         x1, y1 = int(W/2 - x*RW), int(H/2 - y*RH)
         if x1 < 0:
             resized = resized[:,-x1:]
@@ -101,7 +107,7 @@ class HeadCenterCrop:
         return result
     
     def crop_image(self, file: str, save_path: str) -> bool:
-        image = cv2.imread(file)
+        image = cv2.imread(file, cv2.IMREAD_UNCHANGED)
         resized = self.resize(image, use_bgr=True)
         return cv2.imwrite(save_path, resized)
     
