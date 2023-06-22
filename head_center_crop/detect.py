@@ -4,7 +4,7 @@ import numpy as np
 from functools import partial
 import face_recognition
 from anime_face_detector import create_detector
-from utils import expand_box
+from .utils import expand_box
 
 
 class HeadDetector:

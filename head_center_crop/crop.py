@@ -3,15 +3,15 @@ import numpy as np
 from typing import Tuple
 import os
 
-from detect import AnimeHeadDetector, HumanHeadDetector, HeadDetector
-from utils import xywh2xyxy, xyxy2xywh
+from .detect import AnimeHeadDetector, HumanHeadDetector, HeadDetector
+from .utils import xywh2xyxy, xyxy2xywh
 
 
 class HeadCenterCrop:
     def __init__(self, 
                  detector: HeadDetector, 
-                 output_size=(256, 256), #w, h
-                 target_size=(0.5, 0.5)):
+                 output_size: Tuple[int, int]=(256, 256), #w, h
+                 target_size: Tuple[float, float]=(0.5, 0.5)):
         """
             Align head to center
         """
@@ -125,8 +125,8 @@ class HeadCenterCrop:
 
 class AnimeHeadCenterCrop(HeadCenterCrop):
     def __init__(self,
-                 margin_x=(0.5, 0.5), 
-                 margin_y=(1, 0),
+                 margin_x: Tuple[int, int]=(0.5, 0.5), 
+                 margin_y: Tuple[int, int]=(1, 0),
                 **kwargs):
         super().__init__(AnimeHeadDetector(margin_x, margin_y), **kwargs)
 
