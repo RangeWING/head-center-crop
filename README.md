@@ -36,27 +36,28 @@ pip install face_recognition
 
 ## HeadCenterCrop
 ### constructors
-`HeadCenterCrop(self, detector: HeadDetector, output_size: Tuple[int, int]=(256, 256), target_size: Tuple[float, float]=(0.5, 0.5)))`
-The Base class for crop. Use the child classes instead of this class.
-* `detector`: `HeadDetector`
-* `output_size`: The size of the result image. (width, height)
-* `target_size`: The ratio of head in the result image. (width, height)
+* `HeadCenterCrop(self, detector: HeadDetector, output_size: Tuple[int, int]=(256, 256), target_size: Tuple[float, float]=(0.5, 0.5)))`:   
+  The Base class for crop. Use the child classes instead of this class.
+    * `detector`: `HeadDetector`
+    * `output_size`: The size of the result image. (width, height)
+    * `target_size`: The ratio of head in the result image. (width, height)
 
-`HumanCenterCrop(self, margin_x: Tuple[int, int]=(0.2, 0.2), margin_y: Tuple[int, int]=(0.5, 0), **kwargs)`
-Accepts human images as input.
-* `margin_x`, `margin_y`: margin for face area detected by a face detector. 
+* `HumanCenterCrop(self, margin_x: Tuple[int, int]=(0.2, 0.2), margin_y: Tuple[int, int]=(0.5, 0), **kwargs)`:  
+    Accepts human images as input.
+    * `margin_x`, `margin_y`: margin for face area detected by a face detector. 
 
-`AnimeCenterCrop(self, margin_x: Tuple[int, int]=(0.5, 0.5), margin_y: Tuple[int, int]=(1, 0), **kwargs)`
-Accepts anime images as input.
-* same as `HumanCenterCrop`
+* `AnimeCenterCrop(self, margin_x: Tuple[int, int]=(0.5, 0.5), margin_y: Tuple[int, int]=(1, 0), **kwargs)`:  
+    Accepts anime images as input.
+    * same as `HumanCenterCrop`
 
 
 ### Functions
-* `crop_image(self, file: str, save_path: str) -> bool`
+* `crop_image(self, file: str, save_path: str) -> bool`  
 crop specified file and save it.
   * `file`: Path to input file
   * `save_path`: Path to output file
-* `resize(self, image: np.ndarray, manual_area: np.ndarray=None, use_bgr: bool=False) -> np.ndarray`:
+
+* `resize(self, image: np.ndarray, manual_area: np.ndarray=None, use_bgr: bool=False) -> np.ndarray`  
 crop specified image and return it.
   * `image`: an input image. Expected shape: (W, H, C)
   * `manual_area`: if specified, it does not detect the face but use the specified area. [x1, y1, x2, y2]
@@ -78,7 +79,7 @@ human_crop.crop_image(input_image, result_path)
 
 ### Anime Head Crop
 ```python
-from head_center_crop import HumanHeadCenterCrop
+from head_center_crop import AnimeHeadCenterCrop
 
 input_image = 'input.png'
 result_path = 'result.png'
