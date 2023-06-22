@@ -4,89 +4,57 @@ from typing import Tuple
 import os
 
 from detect import AnimeHeadDetector, HumanHeadDetector, HeadDetector
-
-# box: np.ndarray[x, y, w, h]
-def xywh2xyxy(box: np.ndarray):
-    result = np.zeros(4)
-    result[:2] = box[:2] - box[2:]/2
-    result[2:] = box[:2] + box[2:]/2
-    return result
-
-
-def xyxy2xywh(box: np.ndarray):
-    result = np.zeros(4) #x1 y1 x2 y2
-    result[:2] = (box[:2] + box[2:]) / 2
-    result[2:] = (box[2:] - box[:2])
-    return result
+from utils import xywh2xyxy, xyxy2xywh
 
 
 class HeadCenterCrop:
     def __init__(self, 
                  detector: HeadDetector, 
-                 target_size=(0.5, 0.5), 
-                 margin_x=(0.5, 0.5), 
-                 margin_y=(1, 0)):
+                 output_size=(256, 256), #w, h
+                 target_size=(0.5, 0.5)):
         """
             Align head to center
         """
         self.detector = detector
-        self.margins = np.stack([margin_x, margin_y]).transpose().ravel() #x1 y1 x2 y2 [x-left y-top x-right y-bottom]
-        self.target_size = target_size
+        self.output_size = np.array(output_size).transpose()
+        self.target_size = np.array(target_size) * self.output_size
 
-    def _expand_box(self, box: np.ndarray, image_size: Tuple[int, int]=(-1, -1)):
-        """
-            expand bbox
-            
-            *param box* xyxy
-        """
-        wh = xyxy2xywh(box)[2:]
-        W, H = image_size
-
-        result = np.zeros(4) #xyxy 
-        result[:2] = box[:2] - wh * self.margins[:2]
-        result[2:] = box[2:] + wh * self.margins[2:]
-
-        print(f'{box=}, {wh=}, {self.margins=}, {result=}, {wh * self.margins[:2]}')
-
-        if W > 0: 
-            result[[0, 2]] = np.clip(result[[0, 2]], 0, W)
-        
-        if H > 0:  
-            result[[1, 3]] = np.clip(result[[1, 3]], 0, H)
-
-        return result #xyxy
     
     def _get_area(self, image: np.ndarray, use_bgr: bool = False) -> np.ndarray:
-        H, W, C = image.shape
+        C = image.shape[2]
         im = image.copy()
         if use_bgr:
             im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB if C < 4 else cv2.COLOR_BGRA2RGB)
 
         box = self.detector(im)
-        box = self._expand_box(box, image_size=(W, H))
         box = xyxy2xywh(box)
-        box[[0, 2]] /= W
-        box[[1, 3]] /= H
         
         return box
 
     
     def resize(self, image: np.ndarray, manual_area: np.ndarray = None, use_bgr: bool = False) -> np.ndarray:
-        H, W = image.shape[:2]
+        num_channels = image.shape[-1]
+        if num_channels <= 3:
+            result = np.ones((*self.output_size, num_channels), dtype=np.uint8) * 255
+        else:        
+            result = np.zeros((*self.output_size, num_channels), dtype=np.uint8)
         
         x, y, w, h = self._get_area(image, use_bgr) if manual_area is None else manual_area
 
+        # resize image
         ratio = min(self.target_size[0]/w, self.target_size[1]/h)
-
         resized = cv2.resize(image.copy(), (0, 0), fx=ratio, fy=ratio)
-        result = np.zeros_like(image, dtype=np.uint8)
-        result[:,:,:3] = 255
 
+
+        # translate image (x, y) -> (ratio*x, ratio*y) -> (output_size[0]/2, output_size[1]/2)
         RH, RW = resized.shape[:2]
-        
-        # print(f'{x=}, {y=}, {w=}, {h=}, {ratio=}, {RH=}, {RW=}, {result.shape=}')
+        H, W = self.output_size
+        x, y = ratio * x, ratio * y
 
-        x1, y1 = int(W/2 - x*RW), int(H/2 - y*RH)
+        x1, y1 = int(W/2 - x), int(H/2 - y)
+
+        print(f'{resized.shape=}, {self.output_size=}, {x=}, {y=}, {x1=}, {y1=}')
+
         if x1 < 0:
             resized = resized[:,-x1:]
             RW += x1
@@ -101,6 +69,8 @@ class HeadCenterCrop:
         if y1 + RH > H:
             resized = resized[:H-y1,:]
             RH = H - y1
+
+        print(f'{RW=}, {RH=}, {resized.shape=}, {x1=}, {y1=}')
 
         result[y1:y1+RH, x1:x1+RW] = resized
 
@@ -154,11 +124,17 @@ class HeadCenterCrop:
     
 
 class AnimeHeadCenterCrop(HeadCenterCrop):
-    def __init__(self, **kwargs):
-        super().__init__(AnimeHeadDetector(), **kwargs)
+    def __init__(self,
+                 margin_x=(0.5, 0.5), 
+                 margin_y=(1, 0),
+                **kwargs):
+        super().__init__(AnimeHeadDetector(margin_x, margin_y), **kwargs)
 
 
 class HumanHeadCenterCrop(HeadCenterCrop):
-    def __init__(self, **kwargs):
-        super().__init__(HumanHeadDetector(), **kwargs)
+    def __init__(self,
+                 margin_x=(0.2, 0.2), 
+                 margin_y=(0.5, 0),
+                 **kwargs):
+        super().__init__(HumanHeadDetector(margin_x, margin_y), **kwargs)
 
