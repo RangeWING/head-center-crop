@@ -19,6 +19,10 @@ class HeadDetector:
         im = image.copy()
         im = self._preprrocess(im)
         preds = self._detect(im)
+        
+        if len(preds) < 1:
+            return None
+        
         result = self._postprocess(preds)
         result = expand_box(result, self.margins)
         return result
@@ -44,6 +48,9 @@ class AnimeHeadDetector(HeadDetector):
                          margin_x=margin_x, margin_y=margin_y)
 
     def _postprocess(self, preds: np.ndarray) -> np.ndarray:
+        if len(preds) < 1:
+            return None
+
         keypoints = preds[0]['keypoints']
         pt1 = keypoints.min(axis=0)[:2]
         pt2 = keypoints.max(axis=0)[:2]
@@ -57,6 +64,8 @@ class HumanHeadDetector(HeadDetector):
                          margin_x=margin_x, margin_y=margin_y)
 
     def _postprocess(self, preds: np.ndarray) -> np.ndarray:
+        if len(preds) < 1:
+            return None
         top, right, bottom, left = preds[0]
         return np.array([left, top, right, bottom])
     

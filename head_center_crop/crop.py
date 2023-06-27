@@ -27,6 +27,9 @@ class HeadCenterCrop:
             im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB if C < 4 else cv2.COLOR_BGRA2RGB)
 
         box = self.detector(im)
+        if box is None:
+            raise Exception("No head is detected from the input image")
+
         box = xyxy2xywh(box)
         
         return box
