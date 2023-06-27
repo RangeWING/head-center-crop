@@ -22,7 +22,6 @@ Following is the script that I used for setup:
 apt install cmake
 
 conda create -n head python=3.9
-conda install openmim
 conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
 conda install tqdm
 
