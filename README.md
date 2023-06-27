@@ -53,9 +53,15 @@ pip install face_recognition
 
 ### Functions
 * `crop_image(self, file: str, save_path: str) -> bool`  
-crop specified file and save it.
+load specified image, crop and save it.
   * `file`: Path to input file
   * `save_path`: Path to output file
+  
+* `crop_video(self, file: str, save_path: str, detect_frame_index: int=0, verbose:bool=False) -> bool`  
+load specified video, crop and save it. The cropping area is the detected area on the first frame.
+  * `file`: Path to input file
+  * `save_path`: Path to output file
+  * `detect_frame_index`: video frame index to detect a face.
 
 * `resize(self, image: np.ndarray, manual_area: np.ndarray=None, use_bgr: bool=False) -> np.ndarray`  
 crop specified image and return it.
@@ -88,3 +94,15 @@ anime_crop = AnimeHeadCenterCrop(margin_x=(0.4, 0.4))
 anime_crop.crop_image(input_image, result_path)
 ```
 
+
+### Human Head Video Crop
+
+```python
+from head_center_crop import HumanHeadCenterCrop
+
+input_video = 'input.mp4'
+result_path = 'result.mp4'
+
+human_crop = HumanHeadCenterCrop()
+human_crop.crop_video(input_video, result_path, verbose=True)
+```

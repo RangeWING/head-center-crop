@@ -33,6 +33,9 @@ class HeadCenterCrop:
 
     
     def resize(self, image: np.ndarray, manual_area: np.ndarray = None, use_bgr: bool = False) -> np.ndarray:
+        if image is None or type(image) != np.ndarray:
+            raise ValueError("Please check the input image")
+
         num_channels = image.shape[-1]
         if num_channels <= 3:
             result = np.ones((*self.output_size, num_channels), dtype=np.uint8) * 255
@@ -53,8 +56,6 @@ class HeadCenterCrop:
 
         x1, y1 = int(W/2 - x), int(H/2 - y)
 
-        print(f'{resized.shape=}, {self.output_size=}, {x=}, {y=}, {x1=}, {y1=}')
-
         if x1 < 0:
             resized = resized[:,-x1:]
             RW += x1
@@ -70,18 +71,18 @@ class HeadCenterCrop:
             resized = resized[:H-y1,:]
             RH = H - y1
 
-        print(f'{RW=}, {RH=}, {resized.shape=}, {x1=}, {y1=}')
-
         result[y1:y1+RH, x1:x1+RW] = resized
 
         return result
     
     def crop_image(self, file: str, save_path: str) -> bool:
         image = cv2.imread(file, cv2.IMREAD_UNCHANGED)
+        if image is None:
+            raise Exception('Image is None')
         resized = self.resize(image, use_bgr=True)
         return cv2.imwrite(save_path, resized)
     
-    def crop_video(self, file: str, save_path: str, detect_frame_index: int=0) -> bool:
+    def crop_video(self, file: str, save_path: str, detect_frame_index: int=0, verbose:bool=False) -> bool:
         if not os.path.isfile(file):
             raise Exception(f"File {file} not exist")
         cap = cv2.VideoCapture(file)
@@ -89,13 +90,14 @@ class HeadCenterCrop:
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = int(cap.get(cv2.CAP_PROP_FPS))
+        total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
         cap.set(cv2.CAP_PROP_POS_FRAMES, detect_frame_index)
 
         writer = cv2.VideoWriter(save_path,
-                                 cv2.VideoWriter_fourcc(*'XVID'),
+                                 cv2.VideoWriter_fourcc(*'mp4v'),
                                  fps,
-                                 (width, height))
+                                 self.output_size.transpose().tolist())
 
         ret, first_frame = cap.read()
         if not ret:
@@ -107,13 +109,20 @@ class HeadCenterCrop:
         area = self._get_area(first_frame, use_bgr=True)
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         
-        while True:
+        resized = self.resize(first_frame, area)
+        writer.write(resized)
+
+        frame_idx = 0
+        while cap.isOpened():
             ret, frame = cap.read()
-            if not ret:
-                break
+            if not ret: break
             resized = self.resize(frame, area)
             writer.write(resized)
-            
+            frame_idx += 1
+
+        if verbose:
+            print(f'Processed {frame_idx} frames')
+
         if cap.isOpened():
             cap.release()
         writer.release()
