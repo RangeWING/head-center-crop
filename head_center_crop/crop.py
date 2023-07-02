@@ -111,9 +111,6 @@ class HeadCenterCrop:
         
         area = self._get_area(first_frame, use_bgr=True)
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        
-        resized = self.resize(first_frame, area)
-        writer.write(resized)
 
         frame_idx = 0
         while cap.isOpened():
